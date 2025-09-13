@@ -112,5 +112,14 @@ WITH MonthlyRevenue AS(
 	WHERE OrderStatus = 'Completed' 
 	GROUP BY FORMAT(OrderDate, 'yyyy-MM'), Channel
 )
-
-;
+SELECT 
+    Month,
+    Channel,
+    Revenue,
+    LAG(Revenue) OVER (PARTITION BY Channel ORDER BY Month) AS PrevMonthRevenue,
+    ROUND(
+        (CAST(Revenue AS FLOAT) - LAG(Revenue) OVER (PARTITION BY Channel ORDER BY Month))
+        / NULLIF(LAG(Revenue) OVER (PARTITION BY Channel ORDER BY Month),0) * 100, 2
+    ) AS MoM_Growth_Percent
+FROM MonthlyRevenue
+ORDER BY Month, Channel;
