@@ -123,3 +123,11 @@ SELECT
     ) AS MoM_Growth_Percent
 FROM MonthlyRevenue
 ORDER BY Month, Channel;
+
+-- Product Return Rate Analysis
+-- The business wants to identify which products are being returned most often.
+-- Calculate for each product:
+--   1. Total units sold
+--   2. Total units returned
+--   3. Return rate (%) = (units returned / units sold) * 100
+-- This helps the company understand product quality issues or customer dissatisfaction.
