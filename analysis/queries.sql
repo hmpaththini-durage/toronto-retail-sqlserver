@@ -52,6 +52,65 @@ JOIN RecentOrders r ON p.ProductID = r.ProductID ORDER BY r.Revenue DESC;
 --Create a simple RFM score for each customer, considering Recency (days since last order), 
 --Frequency (number of completed orders), and Monetary (total spent). Score each metric from 1–5.
 
+WITH Base AS(
+	SELECT 
+		CustomerID,
+		DATEDIFF(day, MAX(OrderDate), GETDATE()) AS Recency,
+		COUNT(OrderID) AS Frequency,
+		SUM(Total) AS Monetary
+	FROM Orders 
+	WHERE OrderStatus = 'Completed' 
+	GROUP BY CustomerID
+),
+Scored AS(
+	SELECT 
+        CustomerID,
+        NTILE(5) OVER (ORDER BY Recency ASC) AS R_Score,   -- recent orders score higher
+        NTILE(5) OVER (ORDER BY Frequency DESC) AS F_Score, -- frequent buyers score higher
+        NTILE(5) OVER (ORDER BY Monetary DESC) AS M_Score   -- higher spenders score higher
+    FROM Base
+)
+SELECT *,
+       CAST(R_Score AS VARCHAR(1)) 
+       + CAST(F_Score AS VARCHAR(1)) 
+       + CAST(M_Score AS VARCHAR(1)) AS RFM_Code
+FROM Scored
+ORDER BY RFM_Code DESC;
 
+--Campaign Lift Analysis
+-- Shows revenue and orders driven by each online marketing campaign to evaluate ROI.
 
+WITH OnlineOrders AS(
+	SELECT * 
+	FROM Orders
+	WHERE Channel = 'Online' 
+		and OrderStatus = 'Completed'
+)
+SELECT 
+	c.CampaignID, 
+	c.name AS CampaignName,
+	SUM(o.Total) AS AttributedRevenue,
+    COUNT(o.OrderID) AS AttributedOrders,
+    MIN(c.StartDate) AS StartDate,
+    MAX(c.EndDate) AS EndDate
+FROM Campaigns c
+LEFT JOIN OnlineOrders o 
+	ON c.CampaignID = o.CampaignID
+GROUP BY c.CampaignID, c.Name
+ORDER BY AttributedRevenue DESC;
 
+-- Year-over-Year (YoY) Growth Analysis
+-- Compare revenue trends for Online vs Store sales channels.
+-- Calculate monthly revenue and measure growth over time.
+-- Use LAG() to get the previous month’s revenue and compute % growth.
+
+WITH MonthlyRevenue AS(
+	SELECT 
+		FORMAT(OrderDate, 'yyyy-MM') AS Month, 
+		Channel, SUM(Total) As Revenue 
+	FROM Orders 
+	WHERE OrderStatus = 'Completed' 
+	GROUP BY FORMAT(OrderDate, 'yyyy-MM'), Channel
+)
+
+;
